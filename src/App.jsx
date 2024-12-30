@@ -22,7 +22,7 @@ const countOccurrences = (data) => {
           xCount++;
           yearXCount++;
           monthXCount++;
-        } else if (value === 1) {
+        } else if (value == 1) {
           oneCount++;
           yearOneCount++;
           monthOneCount++;
@@ -60,7 +60,7 @@ const MonthDisplay = ({ year, month, dates, monthCounts }) => {
       <ul className="list-disc list-inside">
         {Object.entries(dates).map(([date, value]) => (
           <li key={date}>
-            Date: {date} - {value === 1 ? "Self" : "Natural"}
+            Date: {date} - {value == 1 ? "Self" : "Natural"}
           </li>
         ))}
       </ul>
