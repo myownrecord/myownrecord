@@ -38,7 +38,7 @@ const countOccurrences = (data) => {
 };
 
 // Component to display individual months and their dates
-const MonthDisplay = ({ year, month, dates, monthCounts }) => {
+const MonthDisplay = ({ year, month, dates, monthCounts, onDelete }) => {
   const { monthXCount, monthOneCount } = monthCounts[`${year}-${month}`] || {
     monthXCount: 0,
     monthOneCount: 0,
@@ -59,8 +59,16 @@ const MonthDisplay = ({ year, month, dates, monthCounts }) => {
       </h3>
       <ul className="list-disc list-inside">
         {Object.entries(dates).map(([date, value]) => (
-          <li key={date}>
-            Date: {date} - {value == 1 ? "Self" : "Natural"}
+          <li key={date} className="flex items-center gap-4 p-2 border-b">
+            <span>
+              Date: {date} - {value == 1 ? "Self" : "Natural"}
+            </span>
+            <button
+              onClick={() => onDelete(year, month, date)}
+              className="bg-red-500 text-white p-1 rounded"
+            >
+              D
+            </button>
           </li>
         ))}
       </ul>
@@ -69,7 +77,7 @@ const MonthDisplay = ({ year, month, dates, monthCounts }) => {
 };
 
 // Component to display the full data structure
-const YearDisplay = ({ year, months, yearCounts, monthCounts }) => {
+const YearDisplay = ({ year, months, yearCounts, monthCounts, onDelete }) => {
   const { yearXCount, yearOneCount } = yearCounts;
 
   // Define the order of months
@@ -118,6 +126,7 @@ const YearDisplay = ({ year, months, yearCounts, monthCounts }) => {
                 month={month}
                 dates={dates}
                 monthCounts={monthCounts}
+                onDelete={onDelete}
               />
             </Grid>
           ))}
@@ -134,7 +143,18 @@ const AddRecordForm = ({ onAdd }) => {
 
   const years = Array.from({ length: 7 }, (_, index) => 2024 + index);
   const months = [
-    "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec",
   ];
   const dates = Array.from({ length: 31 }, (_, index) => index + 1);
   const values = ["1", "x"];
@@ -225,8 +245,6 @@ const AddRecordForm = ({ onAdd }) => {
   );
 };
 
-
-
 function App() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -259,7 +277,6 @@ function App() {
   }, []);
 
   const addRecord = async (year, month, date, value) => {
-
     const newData = { [date]: value };
     const yearData = data[year] || {};
     let monthData = yearData[month] || {};
@@ -278,6 +295,33 @@ function App() {
       setData(updatedData);
     } catch (error) {
       console.error("Error adding record:", error);
+    }
+  };
+
+  const deleteRecord = async (year, month, date) => {
+    try {
+      const updatedData = { ...data };
+      console.log(data, "data");
+      // Delete the specific date
+      delete updatedData[year][month][date];
+
+      console.log(updatedData, "updatedData");
+      // Save the updated data to the backend
+      await writeData(updatedData);
+
+      // // Refresh the data from the backend to ensure consistency
+      const refreshedData = await readData();
+      setData(refreshedData);
+
+      // // Recalculate counts
+      const { xCount, oneCount, yearCounts, monthCounts } =
+        countOccurrences(refreshedData);
+      setXCount(xCount);
+      setOneCount(oneCount);
+      setYearCounts(yearCounts);
+      setMonthCounts(monthCounts);
+    } catch (error) {
+      console.error("Error deleting record:", error);
     }
   };
 
@@ -306,6 +350,7 @@ function App() {
                     months={months}
                     yearCounts={yearCounts[year]}
                     monthCounts={monthCounts}
+                    onDelete={deleteRecord}
                   />
                 </Grid>
               ))}
