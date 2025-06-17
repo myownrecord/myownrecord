@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { colors, Grid } from "@mui/material";
+import { Grid } from "@mui/material";
 import { readData, writeData } from "./apis/api"; // Assuming this fetches your data
 
 // Function to count total occurrences of "x" and 1 for each year and month
@@ -51,8 +51,12 @@ const MonthDisplay = ({ year, month, dates, monthCounts, onDelete }) => {
     >
       <h3 className="text-lg font-semibold capitalize">
         {month}
-        <span className="text-green-500"> [S : {monthXCount}]</span>|{" "}
-        <span className="text-red-500">[N : {monthOneCount}]</span>| Total:{" "}
+        <span className="text-green-500">
+          {" "}
+          [Self F: {monthOneCount}]
+        </span> |{" "}
+        <span className="text-red-500">[Natural N: {monthXCount}]</span> |
+        Total:{" "}
         <span className="font-bold text-blue-500">
           {monthXCount + monthOneCount}
         </span>
@@ -61,13 +65,13 @@ const MonthDisplay = ({ year, month, dates, monthCounts, onDelete }) => {
         {Object.entries(dates).map(([date, value]) => (
           <li key={date} className="flex items-center gap-4 p-2 border-b">
             <span>
-              Date: {date} - {value == 1 ? "Self" : "Natural"}
+              Date: {date} - {value == 1 ? "Self F" : "Natural N"}
             </span>
             <button
               onClick={() => onDelete(year, month, date)}
-              className="bg-red-500 text-white p-1 rounded"
+              className="bg-red-500 text-white p-1 rounded hover:bg-red-600"
             >
-              D
+              Delete
             </button>
           </li>
         ))}
@@ -99,8 +103,9 @@ const YearDisplay = ({ year, months, yearCounts, monthCounts, onDelete }) => {
   return (
     <div className="p-6 border rounded shadow gap-4">
       <h2 className="text-xl font-bold mb-4">
-        {year} <span className="text-green-500">[S : {yearXCount}]</span> |{" "}
-        <span className="text-red-500">[N : {yearOneCount}]</span> | Total:{" "}
+        {year} <span className="text-green-500">[Self F: {yearOneCount}]</span>{" "}
+        | <span className="text-red-500">[Natural N: {yearXCount}]</span> |
+        Total:{" "}
         <span className="font-bold text-blue-500">
           {yearXCount + yearOneCount}
         </span>
@@ -111,7 +116,7 @@ const YearDisplay = ({ year, months, yearCounts, monthCounts, onDelete }) => {
         wrap="wrap"
         alignItems="center"
         justifyContent="center"
-        className="gap-4 "
+        className="gap-4"
       >
         {Object.entries(months)
           // Sort months based on predefined order
@@ -141,7 +146,7 @@ const AddRecordForm = ({ onAdd }) => {
   const [date, setDate] = useState("");
   const [value, setValue] = useState("");
 
-  const years = Array.from({ length: 7 }, (_, index) => 2024 + index);
+  const years = Array.from({ length: 31 }, (_, index) => 2020 + index);
   const months = [
     "Jan",
     "Feb",
@@ -157,7 +162,10 @@ const AddRecordForm = ({ onAdd }) => {
     "Dec",
   ];
   const dates = Array.from({ length: 31 }, (_, index) => index + 1);
-  const values = ["1", "x"];
+  const values = [
+    { value: "1", label: "Self F" },
+    { value: "x", label: "Natural N" },
+  ];
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -173,75 +181,90 @@ const AddRecordForm = ({ onAdd }) => {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="mb-4">
-      <div className="mt-2">
-        <label>Year:</label>
-        <select
-          value={year}
-          onChange={(e) => setYear(e.target.value)}
-          className="border p-1 ml-4"
-          required
-        >
-          <option value="">Select Year</option>
-          {years.map((yearOption) => (
-            <option key={yearOption} value={yearOption}>
-              {yearOption}
-            </option>
-          ))}
-        </select>
-      </div>
-      <div className="mt-2">
-        <label>Month:</label>
-        <select
-          value={month}
-          onChange={(e) => setMonth(e.target.value)}
-          className="border p-1 ml-4"
-          required
-        >
-          <option value="">Select Month</option>
-          {months.map((monthOption, index) => (
-            <option key={index} value={monthOption}>
-              {monthOption}
-            </option>
-          ))}
-        </select>
-      </div>
-      <div className="mt-2">
-        <label>Date:</label>
-        <select
-          value={date}
-          onChange={(e) => setDate(e.target.value)}
-          className="border p-1 ml-4"
-          required
-        >
-          <option value="">Select Date</option>
-          {dates.map((dateOption) => (
-            <option key={dateOption} value={dateOption}>
-              {dateOption}
-            </option>
-          ))}
-        </select>
-      </div>
-      <div className="mt-2">
-        <label>Value:</label>
-        <select
-          value={value}
-          onChange={(e) => setValue(e.target.value)}
-          className="border p-1 ml-4"
-          required
-        >
-          <option value="">Select Value</option>
-          {values.map((valueOption) => (
-            <option key={valueOption} value={valueOption}>
-              {valueOption}
-            </option>
-          ))}
-        </select>
-      </div>
-      <button type="submit" className="bg-blue-500 text-white p-2 mt-2">
-        Add Record
-      </button>
-    </form>
+    <div className="mb-6 p-4 border rounded shadow-sm bg-gray-50">
+      <h2 className="text-lg font-semibold mb-4">Add New Record</h2>
+      <form
+        onSubmit={handleSubmit}
+        className="grid grid-cols-2 md:grid-cols-4 gap-4"
+      >
+        <div>
+          <label className="block text-sm font-medium mb-1">Year:</label>
+          <select
+            value={year}
+            onChange={(e) => setYear(e.target.value)}
+            className="border p-2 rounded w-full"
+            required
+          >
+            <option value="">Select Year</option>
+            {years.map((yearOption) => (
+              <option key={yearOption} value={yearOption}>
+                {yearOption}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium mb-1">Month:</label>
+          <select
+            value={month}
+            onChange={(e) => setMonth(e.target.value)}
+            className="border p-2 rounded w-full"
+            required
+          >
+            <option value="">Select Month</option>
+            {months.map((monthOption, index) => (
+              <option key={index} value={monthOption}>
+                {monthOption}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium mb-1">Date:</label>
+          <select
+            value={date}
+            onChange={(e) => setDate(e.target.value)}
+            className="border p-2 rounded w-full"
+            required
+          >
+            <option value="">Select Date</option>
+            {dates.map((dateOption) => (
+              <option key={dateOption} value={dateOption}>
+                {dateOption}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium mb-1">Type:</label>
+          <select
+            value={value}
+            onChange={(e) => setValue(e.target.value)}
+            className="border p-2 rounded w-full"
+            required
+          >
+            <option value="">Select Type</option>
+            {values.map((valueOption) => (
+              <option key={valueOption.value} value={valueOption.value}>
+                {valueOption.label}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="col-span-2 md:col-span-4">
+          <button
+            type="submit"
+            className="bg-blue-500 text-white px-6 py-2 rounded hover:bg-blue-600 transition-colors"
+          >
+            Add Record
+          </button>
+        </div>
+      </form>
+    </div>
   );
 };
 
@@ -254,19 +277,22 @@ function App() {
   const [yearCounts, setYearCounts] = useState({});
   const [monthCounts, setMonthCounts] = useState({});
 
+  // Helper function to update all counts
+  const updateCounts = (dataToCount) => {
+    const { xCount, oneCount, yearCounts, monthCounts } =
+      countOccurrences(dataToCount);
+    setXCount(xCount);
+    setOneCount(oneCount);
+    setYearCounts(yearCounts);
+    setMonthCounts(monthCounts);
+  };
+
   useEffect(() => {
     const fetchData = async () => {
       try {
         const response = await readData(); // Assuming this returns your JSON object
         setData(response);
-
-        // Count occurrences of "x" and "1"
-        const { xCount, oneCount, yearCounts, monthCounts } =
-          countOccurrences(response);
-        setXCount(xCount);
-        setOneCount(oneCount);
-        setYearCounts(yearCounts);
-        setMonthCounts(monthCounts);
+        updateCounts(response); // Update counts
       } catch (err) {
         setError("Error fetching data");
       } finally {
@@ -281,6 +307,7 @@ function App() {
     const yearData = data[year] || {};
     let monthData = yearData[month] || {};
     let _data = { ...data };
+
     try {
       monthData = {
         ...monthData,
@@ -290,65 +317,91 @@ function App() {
         ...yearData,
         [month]: monthData,
       };
+
       await writeData(_data);
       const updatedData = await readData(); // Refresh data
       setData(updatedData);
+      updateCounts(updatedData); // Update counts after adding
+
+      alert("Record added successfully!");
     } catch (error) {
       console.error("Error adding record:", error);
+      alert("Error adding record. Please try again.");
     }
   };
 
   const deleteRecord = async (year, month, date) => {
     try {
       const updatedData = { ...data };
-      console.log(data, "data");
+
       // Delete the specific date
       delete updatedData[year][month][date];
 
-      console.log(updatedData, "updatedData");
+      // If month becomes empty, remove it
+      if (Object.keys(updatedData[year][month]).length === 0) {
+        delete updatedData[year][month];
+      }
+
+      // If year becomes empty, remove it
+      if (Object.keys(updatedData[year]).length === 0) {
+        delete updatedData[year];
+      }
+
       // Save the updated data to the backend
       await writeData(updatedData);
 
-      // // Refresh the data from the backend to ensure consistency
+      // Refresh the data from the backend to ensure consistency
       const refreshedData = await readData();
       setData(refreshedData);
+      updateCounts(refreshedData); // Update counts after deletion
 
-      // // Recalculate counts
-      const { xCount, oneCount, yearCounts, monthCounts } =
-        countOccurrences(refreshedData);
-      setXCount(xCount);
-      setOneCount(oneCount);
-      setYearCounts(yearCounts);
-      setMonthCounts(monthCounts);
+      alert("Record deleted successfully!");
     } catch (error) {
       console.error("Error deleting record:", error);
+      alert("Error deleting record. Please try again.");
     }
   };
 
+  if (loading) return <div className="p-4 text-center">Loading...</div>;
+  if (error) return <div className="p-4 text-center text-red-500">{error}</div>;
+
   return (
-    <div className="p-4">
-      <h1 className="text-lg font-bold">Data Viewer</h1>
+    <div className="p-4 max-w-7xl mx-auto">
+      <h1 className="text-2xl font-bold mb-6">Data Tracker</h1>
+
       <AddRecordForm onAdd={addRecord} />
-      {loading && <div>Loading...</div>}
-      {error && <div>{error}</div>}
+
       {data && (
         <>
-          <div className="mb-4 text-lg font-bold">
-            <span className="text-green-500">Total Self: {xCount}</span> |{" "}
-            <span className="text-red-500">Total Natural {oneCount}</span>|
-            Overall Total:{" "}
-            <span className="font-bold text-blue-500">{xCount + oneCount}</span>
+          <div className="mb-6 p-4 bg-gray-100 rounded-lg">
+            <h2 className="text-xl font-semibold mb-2">Summary</h2>
+            <div className="text-lg">
+              <span className="text-green-600 font-semibold">
+                Total Self F: {oneCount}
+              </span>{" "}
+              |{" "}
+              <span className="text-red-600 font-semibold">
+                Total Natural N: {xCount}
+              </span>{" "}
+              |{" "}
+              <span className="text-blue-600 font-bold">
+                Overall Total: {xCount + oneCount}
+              </span>
+            </div>
           </div>
-          <Grid container spacing={1}>
+
+          <Grid container spacing={2}>
             {/* Reversed data entries to show the last year first */}
             {Object.entries(data)
               .reverse()
               .map(([year, months]) => (
-                <Grid item sm={12} key={year}>
+                <Grid item xs={12} key={year}>
                   <YearDisplay
                     year={year}
                     months={months}
-                    yearCounts={yearCounts[year]}
+                    yearCounts={
+                      yearCounts[year] || { yearXCount: 0, yearOneCount: 0 }
+                    }
                     monthCounts={monthCounts}
                     onDelete={deleteRecord}
                   />
