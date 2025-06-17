@@ -51,12 +51,8 @@ const MonthDisplay = ({ year, month, dates, monthCounts, onDelete }) => {
     >
       <h3 className="text-lg font-semibold capitalize">
         {month}
-        <span className="text-green-500">
-          {" "}
-          [Self F: {monthOneCount}]
-        </span> |{" "}
-        <span className="text-red-500">[Natural N: {monthXCount}]</span> |
-        Total:{" "}
+        <span className="text-green-500"> [Self: {monthOneCount}]</span> |{" "}
+        <span className="text-red-500">[Natural: {monthXCount}]</span> | Total:{" "}
         <span className="font-bold text-blue-500">
           {monthXCount + monthOneCount}
         </span>
@@ -65,7 +61,7 @@ const MonthDisplay = ({ year, month, dates, monthCounts, onDelete }) => {
         {Object.entries(dates).map(([date, value]) => (
           <li key={date} className="flex items-center gap-4 p-2 border-b">
             <span>
-              Date: {date} - {value == 1 ? "Self F" : "Natural N"}
+              Date: {date} - {value == 1 ? "Self" : "Natural"}
             </span>
             <button
               onClick={() => onDelete(year, month, date)}
@@ -103,9 +99,8 @@ const YearDisplay = ({ year, months, yearCounts, monthCounts, onDelete }) => {
   return (
     <div className="p-6 border rounded shadow gap-4">
       <h2 className="text-xl font-bold mb-4">
-        {year} <span className="text-green-500">[Self F: {yearOneCount}]</span>{" "}
-        | <span className="text-red-500">[Natural N: {yearXCount}]</span> |
-        Total:{" "}
+        {year} <span className="text-green-500">[Self: {yearOneCount}]</span> |{" "}
+        <span className="text-red-500">[Natural: {yearXCount}]</span> | Total:{" "}
         <span className="font-bold text-blue-500">
           {yearXCount + yearOneCount}
         </span>
@@ -125,7 +120,7 @@ const YearDisplay = ({ year, months, yearCounts, monthCounts, onDelete }) => {
               monthOrder.indexOf(monthA) - monthOrder.indexOf(monthB)
           )
           .map(([month, dates]) => (
-            <Grid item sm={2} key={month}>
+            <Grid item xs={12} sm={6} md={4} lg={3} xl={2} key={month}>
               <MonthDisplay
                 year={year}
                 month={month}
@@ -163,8 +158,8 @@ const AddRecordForm = ({ onAdd }) => {
   ];
   const dates = Array.from({ length: 31 }, (_, index) => index + 1);
   const values = [
-    { value: "1", label: "Self F" },
-    { value: "x", label: "Natural N" },
+    { value: "1", label: "Self" },
+    { value: "x", label: "Natural" },
   ];
 
   const handleSubmit = (e) => {
@@ -366,7 +361,7 @@ function App() {
   if (error) return <div className="p-4 text-center text-red-500">{error}</div>;
 
   return (
-    <div className="p-4 max-w-7xl mx-auto">
+    <div className="min-h-screen w-full p-4">
       <h1 className="text-2xl font-bold mb-6">Data Tracker</h1>
 
       <AddRecordForm onAdd={addRecord} />
@@ -377,11 +372,11 @@ function App() {
             <h2 className="text-xl font-semibold mb-2">Summary</h2>
             <div className="text-lg">
               <span className="text-green-600 font-semibold">
-                Total Self F: {oneCount}
+                Total Self: {oneCount}
               </span>{" "}
               |{" "}
               <span className="text-red-600 font-semibold">
-                Total Natural N: {xCount}
+                Total Natural: {xCount}
               </span>{" "}
               |{" "}
               <span className="text-blue-600 font-bold">
