@@ -1,6 +1,84 @@
 import React, { useEffect, useState } from "react";
-import { Grid } from "@mui/material";
-import { readData, writeData } from "./apis/api"; // Assuming this fetches your data
+import { readData, writeData } from "./apis/api";
+
+// Password Login Component
+const PasswordLogin = ({ onPasswordCorrect }) => {
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+
+  const correctPassword = "asyncHide098";
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setError("");
+
+    // Simulate a small delay for better UX
+    setTimeout(() => {
+      if (password === correctPassword) {
+        onPasswordCorrect();
+      } else {
+        setError("Incorrect password. Please try again.");
+        setPassword("");
+        setIsLoading(false);
+      }
+    }, 300);
+  };
+
+  return (
+    <div className="password-screen">
+      <div className="password-container">
+        <div className="password-header">
+          <div className="password-icon">🔐</div>
+          <h1 className="password-title">Insight Tracker</h1>
+          <p className="password-subtitle">Enter password to access your records</p>
+        </div>
+
+        <form onSubmit={handleSubmit} className="password-form">
+          <div className="password-input-group">
+            <label htmlFor="password" className="password-label">
+              Password
+            </label>
+            <input
+              type="password"
+              id="password"
+              value={password}
+              onChange={(e) => {
+                setPassword(e.target.value);
+                setError("");
+              }}
+              className="password-input"
+              placeholder="Enter your password"
+              autoFocus
+              disabled={isLoading}
+            />
+            {error && <div className="password-error">{error}</div>}
+          </div>
+
+          <button
+            type="submit"
+            className="password-submit-btn"
+            disabled={isLoading || !password}
+          >
+            {isLoading ? (
+              <span className="password-loading">
+                <span className="password-spinner"></span>
+                Verifying...
+              </span>
+            ) : (
+              "Access Records"
+            )}
+          </button>
+        </form>
+
+        <div className="password-footer">
+          <p className="password-hint">🔒 Your data is secure and protected</p>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 // Function to count total occurrences of "x" and 1 for each year and month
 const countOccurrences = (data) => {
@@ -9,7 +87,6 @@ const countOccurrences = (data) => {
   const yearCounts = {};
   const monthCounts = {};
 
-  // Iterate through the data
   for (let year in data) {
     let yearXCount = 0;
     let yearOneCount = 0;
@@ -28,138 +105,284 @@ const countOccurrences = (data) => {
           monthOneCount++;
         }
       }
-      // Store monthly counts
       monthCounts[`${year}-${month}`] = { monthXCount, monthOneCount };
     }
-    yearCounts[year] = { yearXCount, yearOneCount }; // Store yearly counts
+    yearCounts[year] = { yearXCount, yearOneCount };
   }
 
   return { xCount, oneCount, yearCounts, monthCounts };
 };
 
-// Component to display individual months and their dates
+// Beautiful Animated Stat Card Component
+const StatCard = ({ label, value, color, icon, delay = 0 }) => {
+  const [isVisible, setIsVisible] = useState(false);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setIsVisible(true), delay);
+    return () => clearTimeout(timer);
+  }, [delay]);
+
+  return (
+    <div
+      className={`stat-card group ${isVisible ? "visible" : ""}`}
+      style={{
+        background: `linear-gradient(135deg, ${color}15 0%, ${color}08 100%)`,
+        border: `1px solid ${color}30`,
+      }}
+    >
+      <div className="stat-icon" style={{ color }}>
+        {icon}
+      </div>
+      <div className="stat-content">
+        <div className="stat-value" style={{ color }}>
+          {value}
+        </div>
+        <div className="stat-label">{label}</div>
+      </div>
+      <div className="stat-glow" style={{ background: color }}></div>
+    </div>
+  );
+};
+
+// Modern Month Card Component
 const MonthDisplay = ({ year, month, dates, monthCounts, onDelete }) => {
   const { monthXCount, monthOneCount } = monthCounts[`${year}-${month}`] || {
     monthXCount: 0,
     monthOneCount: 0,
   };
+  const total = monthXCount + monthOneCount;
+  const selfPercentage = total > 0 ? Math.round((monthOneCount / total) * 100) : 0;
+  const naturalPercentage = total > 0 ? Math.round((monthXCount / total) * 100) : 0;
 
   return (
-    <div
-      className="ma-2 p-3 border rounded shadow"
-      style={{ height: "320px", overflowY: "auto" }}
-    >
-      <h3 className="text-lg font-semibold capitalize">
-        {month}
-        <span className="text-green-500"> [Self: {monthOneCount}]</span> |{" "}
-        <span className="text-red-500">[Natural: {monthXCount}]</span> | Total:{" "}
-        <span className="font-bold text-blue-500">
-          {monthXCount + monthOneCount}
-        </span>
-      </h3>
-      <ul className="list-disc list-inside">
+    <div className="month-card">
+      <div className="month-header">
+        <h3 className="month-title">{month}</h3>
+        <div className="month-stats">
+          <span className="stat-badge self-badge">{monthOneCount}</span>
+          <span className="stat-badge natural-badge">{monthXCount}</span>
+          <span className="stat-badge total-badge">{total}</span>
+        </div>
+      </div>
+
+      <div className="month-progress">
+        <div
+          className="progress-bar self-progress"
+          style={{ width: `${selfPercentage}%` }}
+        ></div>
+        <div
+          className="progress-bar natural-progress"
+          style={{ width: `${naturalPercentage}%` }}
+        ></div>
+      </div>
+
+      <div className="month-dates">
         {Object.entries(dates).map(([date, value]) => (
-          <li key={date} className="flex items-center gap-4 p-2 border-b">
-            <span>
-              Date: {date} - {value == 1 ? "Self" : "Natural"}
+          <div key={date} className="date-item">
+            <span className="date-number">{date}</span>
+            <span className={`date-type ${value == 1 ? "type-self" : "type-natural"}`}>
+              {value == 1 ? "Masturbated" : "Nightfall"}
             </span>
             <button
               onClick={() => onDelete(year, month, date)}
-              className="bg-red-500 text-white p-1 rounded hover:bg-red-600"
+              className="delete-btn"
+              title="Delete"
             >
-              Delete
+              ×
             </button>
-          </li>
+          </div>
         ))}
-      </ul>
+      </div>
     </div>
   );
 };
 
-// Component to display the full data structure
-const YearDisplay = ({ year, months, yearCounts, monthCounts, onDelete }) => {
-  const { yearXCount, yearOneCount } = yearCounts;
+// Yearly Overview Component
+const YearlyOverview = ({ yearCounts, data }) => {
+  if (!data || !yearCounts) return null;
 
-  // Define the order of months
-  const monthOrder = [
-    "Jan",
-    "Feb",
-    "Mar",
-    "Apr",
-    "May",
-    "Jun",
-    "Jul",
-    "Aug",
-    "Sep",
-    "Oct",
-    "Nov",
-    "Dec",
-  ];
+  const sortedYears = Object.keys(yearCounts).sort((a, b) => parseInt(b) - parseInt(a));
+
+  // Calculate averages
+  const totalYears = sortedYears.length;
+  const avgPerYear = totalYears > 0
+    ? sortedYears.reduce((sum, year) => {
+        const { yearXCount, yearOneCount } = yearCounts[year];
+        return sum + yearXCount + yearOneCount;
+      }, 0) / totalYears
+    : 0;
+
+  const avgMasturbated = totalYears > 0
+    ? sortedYears.reduce((sum, year) => sum + yearCounts[year].yearOneCount, 0) / totalYears
+    : 0;
+
+  const avgNightfall = totalYears > 0
+    ? sortedYears.reduce((sum, year) => sum + yearCounts[year].yearXCount, 0) / totalYears
+    : 0;
 
   return (
-    <div className="p-6 border rounded shadow gap-4">
-      <h2 className="text-xl font-bold mb-4">
-        {year} <span className="text-green-500">[Self: {yearOneCount}]</span> |{" "}
-        <span className="text-red-500">[Natural: {yearXCount}]</span> | Total:{" "}
-        <span className="font-bold text-blue-500">
-          {yearXCount + yearOneCount}
-        </span>
-      </h2>
-      <Grid
-        container
-        spacing={1}
-        wrap="wrap"
-        alignItems="center"
-        justifyContent="center"
-        className="gap-4"
+    <div className="yearly-overview-section">
+      <div className="yearly-overview-card">
+        <h3 className="yearly-overview-title">
+          <span className="yearly-icon">📅</span>
+          Yearly Overview
+        </h3>
+        
+        <div className="yearly-stats-grid">
+          {sortedYears.map((year) => {
+            const { yearXCount, yearOneCount } = yearCounts[year];
+            const yearTotal = yearXCount + yearOneCount;
+            const masturbatedPct = yearTotal > 0 ? Math.round((yearOneCount / yearTotal) * 100) : 0;
+            const nightfallPct = yearTotal > 0 ? Math.round((yearXCount / yearTotal) * 100) : 0;
+
+            return (
+              <div key={year} className="yearly-stat-item">
+                <div className="yearly-stat-header">
+                  <h4 className="yearly-stat-year">{year}</h4>
+                  <span className="yearly-stat-total">{yearTotal} total</span>
+                </div>
+                
+                <div className="yearly-stat-details">
+                  <div className="yearly-stat-detail">
+                    <span className="yearly-stat-label">Masturbated:</span>
+                    <span className="yearly-stat-value" style={{ color: "#10b981" }}>
+                      {yearOneCount} ({masturbatedPct}%)
+                    </span>
+                  </div>
+                  <div className="yearly-stat-detail">
+                    <span className="yearly-stat-label">Nightfall:</span>
+                    <span className="yearly-stat-value" style={{ color: "#ef4444" }}>
+                      {yearXCount} ({nightfallPct}%)
+                    </span>
+                  </div>
+                </div>
+
+                <div className="yearly-stat-progress">
+                  <div
+                    className="yearly-progress-bar self-progress"
+                    style={{ width: `${masturbatedPct}%` }}
+                  ></div>
+                  <div
+                    className="yearly-progress-bar natural-progress"
+                    style={{ width: `${nightfallPct}%` }}
+                  ></div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {totalYears > 0 && (
+          <div className="yearly-averages">
+            <h4 className="yearly-averages-title">Yearly Averages</h4>
+            <div className="yearly-averages-grid">
+              <div className="yearly-average-item">
+                <span className="yearly-average-label">Average Total per Year</span>
+                <span className="yearly-average-value">{Math.round(avgPerYear)}</span>
+              </div>
+              <div className="yearly-average-item">
+                <span className="yearly-average-label">Avg Masturbated per Year</span>
+                <span className="yearly-average-value" style={{ color: "#10b981" }}>
+                  {Math.round(avgMasturbated)}
+                </span>
+              </div>
+              <div className="yearly-average-item">
+                <span className="yearly-average-label">Avg Nightfall per Year</span>
+                <span className="yearly-average-value" style={{ color: "#ef4444" }}>
+                  {Math.round(avgNightfall)}
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// Stunning Year Display Component
+const YearDisplay = ({ year, months, yearCounts, monthCounts, onDelete }) => {
+  const { yearXCount, yearOneCount } = yearCounts;
+  const total = yearXCount + yearOneCount;
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  const monthOrder = [
+    "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+  ];
+
+  const sortedMonths = Object.entries(months).sort(
+    ([monthA], [monthB]) =>
+      monthOrder.indexOf(monthA) - monthOrder.indexOf(monthB)
+  );
+
+  return (
+    <div className="year-section">
+      <div
+        className="year-header"
+        onClick={() => setIsExpanded(!isExpanded)}
       >
-        {Object.entries(months)
-          // Sort months based on predefined order
-          .sort(
-            ([monthA], [monthB]) =>
-              monthOrder.indexOf(monthA) - monthOrder.indexOf(monthB)
-          )
-          .map(([month, dates]) => (
-            <Grid item xs={12} sm={6} md={4} lg={3} xl={2} key={month}>
+        <div className="year-title-wrapper">
+          <h2 className="year-title">{year}</h2>
+          <div className="year-summary">
+            <span className="summary-item self">
+              <span className="summary-icon">✓</span>
+              {yearOneCount}
+            </span>
+            <span className="summary-item natural">
+              <span className="summary-icon">✗</span>
+              {yearXCount}
+            </span>
+            <span className="summary-item total">
+              <span className="summary-icon">●</span>
+              {total}
+            </span>
+          </div>
+        </div>
+        <div className={`expand-icon ${isExpanded ? "expanded" : ""}`}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <polyline points="6 9 12 15 18 9"></polyline>
+          </svg>
+        </div>
+      </div>
+
+      {isExpanded && (
+        <div className="year-content">
+          <div className="months-grid">
+            {sortedMonths.map(([month, dates]) => (
               <MonthDisplay
+                key={month}
                 year={year}
                 month={month}
                 dates={dates}
                 monthCounts={monthCounts}
                 onDelete={onDelete}
               />
-            </Grid>
-          ))}
-      </Grid>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 };
 
+// Beautiful Add Record Form
 const AddRecordForm = ({ onAdd }) => {
   const [year, setYear] = useState("");
   const [month, setMonth] = useState("");
   const [date, setDate] = useState("");
   const [value, setValue] = useState("");
+  const [isOpen, setIsOpen] = useState(false);
 
   const years = Array.from({ length: 31 }, (_, index) => 2020 + index);
   const months = [
-    "Jan",
-    "Feb",
-    "Mar",
-    "Apr",
-    "May",
-    "Jun",
-    "Jul",
-    "Aug",
-    "Sep",
-    "Oct",
-    "Nov",
-    "Dec",
+    "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
   ];
   const dates = Array.from({ length: 31 }, (_, index) => index + 1);
   const values = [
-    { value: "1", label: "Self" },
-    { value: "x", label: "Natural" },
+    { value: "1", label: "Masturbated", icon: "✓", color: "#10b981" },
+    { value: "x", label: "Nightfall", icon: "✗", color: "#ef4444" },
   ];
 
   const handleSubmit = (e) => {
@@ -168,102 +391,125 @@ const AddRecordForm = ({ onAdd }) => {
       alert("Please fill out all fields!");
       return;
     }
-    onAdd(year, month, date, value); // Call the add function
+    onAdd(year, month, date, value);
     setYear("");
     setMonth("");
     setDate("");
     setValue("");
+    setIsOpen(false);
   };
 
   return (
-    <div className="mb-6 p-4 border rounded shadow-sm bg-gray-50">
-      <h2 className="text-lg font-semibold mb-4">Add New Record</h2>
-      <form
-        onSubmit={handleSubmit}
-        className="grid grid-cols-2 md:grid-cols-4 gap-4"
+    <>
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="floating-add-btn"
+        title="Add New Record"
       >
-        <div>
-          <label className="block text-sm font-medium mb-1">Year:</label>
-          <select
-            value={year}
-            onChange={(e) => setYear(e.target.value)}
-            className="border p-2 rounded w-full"
-            required
-          >
-            <option value="">Select Year</option>
-            {years.map((yearOption) => (
-              <option key={yearOption} value={yearOption}>
-                {yearOption}
-              </option>
-            ))}
-          </select>
-        </div>
+        <span className="add-icon">+</span>
+      </button>
 
-        <div>
-          <label className="block text-sm font-medium mb-1">Month:</label>
-          <select
-            value={month}
-            onChange={(e) => setMonth(e.target.value)}
-            className="border p-2 rounded w-full"
-            required
-          >
-            <option value="">Select Month</option>
-            {months.map((monthOption, index) => (
-              <option key={index} value={monthOption}>
-                {monthOption}
-              </option>
-            ))}
-          </select>
-        </div>
+      {isOpen && (
+        <div className="modal-overlay" onClick={() => setIsOpen(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2 className="modal-title">Add New Record</h2>
+              <button
+                onClick={() => setIsOpen(false)}
+                className="modal-close"
+              >
+                ×
+              </button>
+            </div>
 
-        <div>
-          <label className="block text-sm font-medium mb-1">Date:</label>
-          <select
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
-            className="border p-2 rounded w-full"
-            required
-          >
-            <option value="">Select Date</option>
-            {dates.map((dateOption) => (
-              <option key={dateOption} value={dateOption}>
-                {dateOption}
-              </option>
-            ))}
-          </select>
-        </div>
+            <form onSubmit={handleSubmit} className="add-form">
+              <div className="form-group">
+                <label className="form-label">Year</label>
+                <select
+                  value={year}
+                  onChange={(e) => setYear(e.target.value)}
+                  className="form-select"
+                  required
+                >
+                  <option value="">Select Year</option>
+                  {years.map((yearOption) => (
+                    <option key={yearOption} value={yearOption}>
+                      {yearOption}
+                    </option>
+                  ))}
+                </select>
+              </div>
 
-        <div>
-          <label className="block text-sm font-medium mb-1">Type:</label>
-          <select
-            value={value}
-            onChange={(e) => setValue(e.target.value)}
-            className="border p-2 rounded w-full"
-            required
-          >
-            <option value="">Select Type</option>
-            {values.map((valueOption) => (
-              <option key={valueOption.value} value={valueOption.value}>
-                {valueOption.label}
-              </option>
-            ))}
-          </select>
-        </div>
+              <div className="form-group">
+                <label className="form-label">Month</label>
+                <select
+                  value={month}
+                  onChange={(e) => setMonth(e.target.value)}
+                  className="form-select"
+                  required
+                >
+                  <option value="">Select Month</option>
+                  {months.map((monthOption) => (
+                    <option key={monthOption} value={monthOption}>
+                      {monthOption}
+                    </option>
+                  ))}
+                </select>
+              </div>
 
-        <div className="col-span-2 md:col-span-4">
-          <button
-            type="submit"
-            className="bg-blue-500 text-white px-6 py-2 rounded hover:bg-blue-600 transition-colors"
-          >
-            Add Record
-          </button>
+              <div className="form-group">
+                <label className="form-label">Date</label>
+                <select
+                  value={date}
+                  onChange={(e) => setDate(e.target.value)}
+                  className="form-select"
+                  required
+                >
+                  <option value="">Select Date</option>
+                  {dates.map((dateOption) => (
+                    <option key={dateOption} value={dateOption}>
+                      {dateOption}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Type</label>
+                <div className="type-buttons">
+                  {values.map((valueOption) => (
+                    <button
+                      key={valueOption.value}
+                      type="button"
+                      onClick={() => setValue(valueOption.value)}
+                      className={`type-button ${value === valueOption.value ? "active" : ""}`}
+                      style={{
+                        borderColor: value === valueOption.value ? valueOption.color : "transparent",
+                        background: value === valueOption.value ? `${valueOption.color}15` : "transparent",
+                      }}
+                    >
+                      <span style={{ color: valueOption.color }}>{valueOption.icon}</span>
+                      {valueOption.label}
+                    </button>
+                  ))}
+                </div>
+                <input type="hidden" value={value} required />
+              </div>
+
+              <button type="submit" className="submit-btn">
+                Add Record
+              </button>
+            </form>
+          </div>
         </div>
-      </form>
-    </div>
+      )}
+    </>
   );
 };
 
+// Main App Component
 function App() {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -272,7 +518,6 @@ function App() {
   const [yearCounts, setYearCounts] = useState({});
   const [monthCounts, setMonthCounts] = useState({});
 
-  // Helper function to update all counts
   const updateCounts = (dataToCount) => {
     const { xCount, oneCount, yearCounts, monthCounts } =
       countOccurrences(dataToCount);
@@ -283,19 +528,21 @@ function App() {
   };
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const response = await readData(); // Assuming this returns your JSON object
-        setData(response);
-        updateCounts(response); // Update counts
-      } catch (err) {
-        setError("Error fetching data");
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchData();
-  }, []);
+    if (isAuthenticated) {
+      const fetchData = async () => {
+        try {
+          const response = await readData();
+          setData(response);
+          updateCounts(response);
+        } catch (err) {
+          setError("Error fetching data");
+        } finally {
+          setLoading(false);
+        }
+      };
+      fetchData();
+    }
+  }, [isAuthenticated]);
 
   const addRecord = async (year, month, date, value) => {
     const newData = { [date]: value };
@@ -314,11 +561,9 @@ function App() {
       };
 
       await writeData(_data);
-      const updatedData = await readData(); // Refresh data
+      const updatedData = await readData();
       setData(updatedData);
-      updateCounts(updatedData); // Update counts after adding
-
-      alert("Record added successfully!");
+      updateCounts(updatedData);
     } catch (error) {
       console.error("Error adding record:", error);
       alert("Error adding record. Please try again.");
@@ -326,85 +571,164 @@ function App() {
   };
 
   const deleteRecord = async (year, month, date) => {
+    if (!confirm("Are you sure you want to delete this record?")) return;
+
     try {
       const updatedData = { ...data };
-
-      // Delete the specific date
       delete updatedData[year][month][date];
 
-      // If month becomes empty, remove it
       if (Object.keys(updatedData[year][month]).length === 0) {
         delete updatedData[year][month];
       }
 
-      // If year becomes empty, remove it
       if (Object.keys(updatedData[year]).length === 0) {
         delete updatedData[year];
       }
 
-      // Save the updated data to the backend
       await writeData(updatedData);
-
-      // Refresh the data from the backend to ensure consistency
       const refreshedData = await readData();
       setData(refreshedData);
-      updateCounts(refreshedData); // Update counts after deletion
-
-      alert("Record deleted successfully!");
+      updateCounts(refreshedData);
     } catch (error) {
       console.error("Error deleting record:", error);
       alert("Error deleting record. Please try again.");
     }
   };
 
-  if (loading) return <div className="p-4 text-center">Loading...</div>;
-  if (error) return <div className="p-4 text-center text-red-500">{error}</div>;
+  // Show password screen if not authenticated
+  if (!isAuthenticated) {
+    return (
+      <div className="app-container">
+        <div className="background-gradient"></div>
+        <div className="particles"></div>
+        <PasswordLogin onPasswordCorrect={() => setIsAuthenticated(true)} />
+      </div>
+    );
+  }
+
+  if (loading)
+    return (
+      <div className="app-container">
+        <div className="background-gradient"></div>
+        <div className="particles"></div>
+        <div className="loading-screen">
+          <div className="loader"></div>
+          <p className="loading-text">Loading your records...</p>
+        </div>
+      </div>
+    );
+
+  if (error)
+    return (
+      <div className="app-container">
+        <div className="background-gradient"></div>
+        <div className="particles"></div>
+        <div className="error-screen">
+          <div className="error-icon">⚠️</div>
+          <p className="error-text">{error}</p>
+        </div>
+      </div>
+    );
+
+  const total = xCount + oneCount;
+  const selfPercentage = total > 0 ? Math.round((oneCount / total) * 100) : 0;
+  const naturalPercentage = total > 0 ? Math.round((xCount / total) * 100) : 0;
 
   return (
-    <div className="min-h-screen w-full p-4">
-      <h1 className="text-2xl font-bold mb-6">Data Tracker</h1>
+    <div className="app-container">
+      <div className="background-gradient"></div>
+      <div className="particles"></div>
 
-      <AddRecordForm onAdd={addRecord} />
+      <header className="app-header">
+        <div className="header-content">
+          <h1 className="app-title">
+            <span className="title-icon">📊</span>
+            Insight Tracker
+          </h1>
+          <p className="app-subtitle">Track and visualize your records beautifully</p>
+        </div>
+      </header>
 
-      {data && (
-        <>
-          <div className="mb-6 p-4 bg-gray-100 rounded-lg">
-            <h2 className="text-xl font-semibold mb-2">Summary</h2>
-            <div className="text-lg">
-              <span className="text-green-600 font-semibold">
-                Total Self: {oneCount}
-              </span>{" "}
-              |{" "}
-              <span className="text-red-600 font-semibold">
-                Total Natural: {xCount}
-              </span>{" "}
-              |{" "}
-              <span className="text-blue-600 font-bold">
-                Overall Total: {xCount + oneCount}
-              </span>
+      <main className="app-main">
+        <div className="stats-section">
+          <StatCard
+            label="Total Masturbated"
+            value={oneCount}
+            color="#10b981"
+            icon="✓"
+            delay={100}
+          />
+          <StatCard
+            label="Total Nightfall"
+            value={xCount}
+            color="#ef4444"
+            icon="✗"
+            delay={200}
+          />
+          <StatCard
+            label="Overall Total"
+            value={total}
+            color="#3b82f6"
+            icon="●"
+            delay={300}
+          />
+        </div>
+
+        <div className="overview-section">
+          <div className="overview-card">
+            <h3 className="overview-title">Overview</h3>
+            <div className="overview-stats">
+              <div className="overview-item">
+                <div className="overview-label">Masturbated</div>
+                <div className="overview-value" style={{ color: "#10b981" }}>
+                  {selfPercentage}%
+                </div>
+              </div>
+              <div className="overview-item">
+                <div className="overview-label">Nightfall</div>
+                <div className="overview-value" style={{ color: "#ef4444" }}>
+                  {naturalPercentage}%
+                </div>
+              </div>
+            </div>
+            <div className="overview-progress">
+              <div
+                className="progress-fill self-progress"
+                style={{ width: `${selfPercentage}%` }}
+              ></div>
+              <div
+                className="progress-fill natural-progress"
+                style={{ width: `${naturalPercentage}%` }}
+              ></div>
             </div>
           </div>
+        </div>
 
-          <Grid container spacing={2}>
-            {/* Reversed data entries to show the last year first */}
+        {data && (
+          <>
+            <YearlyOverview yearCounts={yearCounts} data={data} />
+            
+            <div className="years-section">
             {Object.entries(data)
               .reverse()
               .map(([year, months]) => (
-                <Grid item xs={12} key={year}>
-                  <YearDisplay
-                    year={year}
-                    months={months}
-                    yearCounts={
-                      yearCounts[year] || { yearXCount: 0, yearOneCount: 0 }
-                    }
-                    monthCounts={monthCounts}
-                    onDelete={deleteRecord}
-                  />
-                </Grid>
+                <YearDisplay
+                  key={year}
+                  year={year}
+                  months={months}
+                  yearCounts={
+                    yearCounts[year] || { yearXCount: 0, yearOneCount: 0 }
+                  }
+                  monthCounts={monthCounts}
+                  onDelete={deleteRecord}
+                />
               ))}
-          </Grid>
-        </>
-      )}
+            </div>
+          </>
+        )}
+
+        <AddRecordForm onAdd={addRecord} />
+      </main>
     </div>
   );
 }
