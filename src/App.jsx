@@ -368,18 +368,57 @@ const YearDisplay = ({ year, months, yearCounts, monthCounts, onDelete }) => {
 
 // Beautiful Add Record Form
 const AddRecordForm = ({ onAdd }) => {
-  const [year, setYear] = useState("");
-  const [month, setMonth] = useState("");
-  const [date, setDate] = useState("");
+  // Get current date values
+  const currentDate = new Date();
+  const currentYear = currentDate.getFullYear().toString();
+  const currentMonth = currentDate.toLocaleString('default', { month: 'short' });
+  const currentDay = currentDate.getDate().toString();
+
+  const [year, setYear] = useState(currentYear);
+  const [month, setMonth] = useState(currentMonth);
+  const [date, setDate] = useState(currentDay);
   const [value, setValue] = useState("");
   const [isOpen, setIsOpen] = useState(false);
 
   const years = Array.from({ length: 31 }, (_, index) => 2020 + index);
+  
   const months = [
-    "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+    { value: "Jan", label: "Jan", icon: "❄️" },
+    { value: "Feb", label: "Feb", icon: "💝" },
+    { value: "Mar", label: "Mar", icon: "🌸" },
+    { value: "Apr", label: "Apr", icon: "🌷" },
+    { value: "May", label: "May", icon: "🌻" },
+    { value: "Jun", label: "Jun", icon: "☀️" },
+    { value: "Jul", label: "Jul", icon: "🔥" },
+    { value: "Aug", label: "Aug", icon: "🌞" },
+    { value: "Sep", label: "Sep", icon: "🍂" },
+    { value: "Oct", label: "Oct", icon: "🎃" },
+    { value: "Nov", label: "Nov", icon: "🍁" },
+    { value: "Dec", label: "Dec", icon: "🎄" },
   ];
-  const dates = Array.from({ length: 31 }, (_, index) => index + 1);
+  
+  // Get days in selected month and year
+  const getDaysInMonth = (monthValue, yearValue) => {
+    if (!monthValue || !yearValue) return Array.from({ length: 31 }, (_, i) => i + 1);
+    const monthIndex = months.findIndex(m => m.value === monthValue);
+    if (monthIndex === -1) return Array.from({ length: 31 }, (_, i) => i + 1);
+    const daysInMonth = new Date(yearValue, monthIndex + 1, 0).getDate();
+    return Array.from({ length: daysInMonth }, (_, i) => i + 1);
+  };
+
+  // Update dates when month or year changes
+  const dates = getDaysInMonth(month, year);
+  
+  // Reset date if it's invalid for the new month/year
+  useEffect(() => {
+    if (date && month && year) {
+      const maxDate = getDaysInMonth(month, year).length;
+      if (parseInt(date) > maxDate) {
+        setDate("");
+      }
+    }
+  }, [month, year]);
+  
   const values = [
     { value: "1", label: "Masturbated", icon: "✓", color: "#10b981" },
     { value: "x", label: "Nightfall", icon: "✗", color: "#ef4444" },
@@ -392,9 +431,14 @@ const AddRecordForm = ({ onAdd }) => {
       return;
     }
     onAdd(year, month, date, value);
-    setYear("");
-    setMonth("");
-    setDate("");
+    // Reset to current date after submission
+    const newDate = new Date();
+    const newYear = newDate.getFullYear().toString();
+    const newMonth = newDate.toLocaleString('default', { month: 'short' });
+    const newDay = newDate.getDate().toString();
+    setYear(newYear);
+    setMonth(newMonth);
+    setDate(newDay);
     setValue("");
     setIsOpen(false);
   };
@@ -423,55 +467,75 @@ const AddRecordForm = ({ onAdd }) => {
             </div>
 
             <form onSubmit={handleSubmit} className="add-form">
-              <div className="form-group">
-                <label className="form-label">Year</label>
-                <select
-                  value={year}
-                  onChange={(e) => setYear(e.target.value)}
-                  className="form-select"
-                  required
-                >
-                  <option value="">Select Year</option>
-                  {years.map((yearOption) => (
-                    <option key={yearOption} value={yearOption}>
-                      {yearOption}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              <div className="date-selection-group">
+                <div className="form-group date-field">
+                  <label className="form-label">
+                    <span className="label-icon">📅</span>
+                    Month
+                  </label>
+                  <select
+                    value={month}
+                    onChange={(e) => {
+                      setMonth(e.target.value);
+                      setDate(""); // Reset date when month changes
+                    }}
+                    className="form-select"
+                    required
+                  >
+                    <option value="">Select Month</option>
+                    {months.map((monthOption) => (
+                      <option key={monthOption.value} value={monthOption.value}>
+                        {monthOption.icon} {monthOption.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
 
-              <div className="form-group">
-                <label className="form-label">Month</label>
-                <select
-                  value={month}
-                  onChange={(e) => setMonth(e.target.value)}
-                  className="form-select"
-                  required
-                >
-                  <option value="">Select Month</option>
-                  {months.map((monthOption) => (
-                    <option key={monthOption} value={monthOption}>
-                      {monthOption}
-                    </option>
-                  ))}
-                </select>
-              </div>
+                <div className="form-group date-field">
+                  <label className="form-label">
+                    <span className="label-icon">📆</span>
+                    Year
+                  </label>
+                  <select
+                    value={year}
+                    onChange={(e) => {
+                      setYear(e.target.value);
+                      setDate(""); // Reset date when year changes
+                    }}
+                    className="form-select"
+                    required
+                  >
+                    <option value="">Select Year</option>
+                    {years.map((yearOption) => (
+                      <option key={yearOption} value={yearOption}>
+                        {yearOption}
+                      </option>
+                    ))}
+                  </select>
+                </div>
 
-              <div className="form-group">
-                <label className="form-label">Date</label>
-                <select
-                  value={date}
-                  onChange={(e) => setDate(e.target.value)}
-                  className="form-select"
-                  required
-                >
-                  <option value="">Select Date</option>
-                  {dates.map((dateOption) => (
-                    <option key={dateOption} value={dateOption}>
-                      {dateOption}
+                <div className="form-group date-field">
+                  <label className="form-label">
+                    <span className="label-icon">🗓️</span>
+                    Date
+                  </label>
+                  <select
+                    value={date}
+                    onChange={(e) => setDate(e.target.value)}
+                    className="form-select"
+                    required
+                    disabled={!month || !year}
+                  >
+                    <option value="">
+                      {month && year ? "Select Date" : "Select Month & Year first"}
                     </option>
-                  ))}
-                </select>
+                    {dates.map((dateOption) => (
+                      <option key={dateOption} value={dateOption}>
+                        {dateOption}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
 
               <div className="form-group">
@@ -645,7 +709,7 @@ function App() {
             <span className="title-icon">📊</span>
             Insight Tracker
           </h1>
-          <p className="app-subtitle">Track and visualize your records beautifully</p>
+          <p className="app-subtitle">Your personal insights, beautifully organized</p>
         </div>
       </header>
 
