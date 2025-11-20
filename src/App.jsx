@@ -80,6 +80,146 @@ const PasswordLogin = ({ onPasswordCorrect }) => {
   );
 };
 
+// Calculate streaks from data
+const calculateStreaks = (data) => {
+  if (!data) return { currentStreak: 0, longestStreak: 0 };
+  
+  const allDates = [];
+  for (let year in data) {
+    for (let month in data[year]) {
+      for (let day in data[year][month]) {
+        const monthIndex = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"].indexOf(month);
+        if (monthIndex !== -1) {
+          const date = new Date(year, monthIndex, parseInt(day));
+          allDates.push(date);
+        }
+      }
+    }
+  }
+  
+  if (allDates.length === 0) return { currentStreak: 0, longestStreak: 0 };
+  
+  // Sort dates
+  allDates.sort((a, b) => a - b);
+  
+  // Calculate current streak (from today backwards)
+  let currentStreak = 0;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  
+  for (let i = allDates.length - 1; i >= 0; i--) {
+    const checkDate = new Date(today);
+    checkDate.setDate(checkDate.getDate() - currentStreak);
+    checkDate.setHours(0, 0, 0, 0);
+    
+    if (allDates[i].getTime() === checkDate.getTime()) {
+      currentStreak++;
+    } else if (currentStreak > 0) {
+      break;
+    }
+  }
+  
+  // Calculate longest streak
+  let longestStreak = 1;
+  let tempStreak = 1;
+  
+  for (let i = 1; i < allDates.length; i++) {
+    const prevDate = allDates[i - 1];
+    const currDate = allDates[i];
+    const diffDays = Math.floor((currDate - prevDate) / (1000 * 60 * 60 * 24));
+    
+    if (diffDays === 1) {
+      tempStreak++;
+      longestStreak = Math.max(longestStreak, tempStreak);
+    } else {
+      tempStreak = 1;
+    }
+  }
+  
+  return { currentStreak, longestStreak };
+};
+
+// Get statistics insights
+const getInsights = (data, yearCounts, monthCounts) => {
+  if (!data || !yearCounts) return [];
+  
+  const insights = [];
+  
+  // Find most active year
+  let maxYear = { year: "", total: 0 };
+  for (let year in yearCounts) {
+    const total = yearCounts[year].yearXCount + yearCounts[year].yearOneCount;
+    if (total > maxYear.total) {
+      maxYear = { year, total };
+    }
+  }
+  if (maxYear.year) {
+    insights.push({ type: "most_active_year", label: "Most Active Year", value: maxYear.year, subtext: `${maxYear.total} records` });
+  }
+  
+  // Find most active month across all years
+  let maxMonth = { month: "", total: 0 };
+  for (let key in monthCounts) {
+    const total = monthCounts[key].monthXCount + monthCounts[key].monthOneCount;
+    if (total > maxMonth.total) {
+      const parts = key.split("-");
+      maxMonth = { month: parts[1], total };
+    }
+  }
+  if (maxMonth.month) {
+    insights.push({ type: "most_active_month", label: "Most Active Month", value: maxMonth.month, subtext: `${maxMonth.total} records` });
+  }
+  
+  // Calculate average per year
+  const years = Object.keys(yearCounts);
+  if (years.length > 0) {
+    const totalRecords = years.reduce((sum, year) => {
+      return sum + yearCounts[year].yearXCount + yearCounts[year].yearOneCount;
+    }, 0);
+    const avgPerYear = Math.round(totalRecords / years.length);
+    insights.push({ type: "avg_per_year", label: "Average per Year", value: avgPerYear.toString(), subtext: `across ${years.length} years` });
+  }
+  
+  return insights;
+};
+
+// Export data to JSON/CSV
+const exportData = (data, format = "json") => {
+  if (!data) return;
+  
+  if (format === "json") {
+    const jsonStr = JSON.stringify(data, null, 2);
+    const blob = new Blob([jsonStr], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `insight-tracker-${new Date().toISOString().split("T")[0]}.json`;
+    link.click();
+    URL.revokeObjectURL(url);
+  } else if (format === "csv") {
+    const rows = [];
+    rows.push(["Year", "Month", "Date", "Type"]);
+    
+    for (let year in data) {
+      for (let month in data[year]) {
+        for (let day in data[year][month]) {
+          const type = data[year][month][day] === "1" ? "Masturbated" : "Nightfall";
+          rows.push([year, month, day, type]);
+        }
+      }
+    }
+    
+    const csv = rows.map(row => row.join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `insight-tracker-${new Date().toISOString().split("T")[0]}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  }
+};
+
 // Function to count total occurrences of "x" and 1 for each year and month
 const countOccurrences = (data) => {
   let xCount = 0;
@@ -111,6 +251,131 @@ const countOccurrences = (data) => {
   }
 
   return { xCount, oneCount, yearCounts, monthCounts };
+};
+
+// Search and Filter Component
+const SearchFilter = ({ onSearch, onFilterChange, filterYear, filterMonth, years, months }) => {
+  const [searchTerm, setSearchTerm] = useState("");
+  const [showFilters, setShowFilters] = useState(false);
+
+  const handleSearch = (e) => {
+    const value = e.target.value;
+    setSearchTerm(value);
+    onSearch(value);
+  };
+
+  return (
+    <div className="search-filter-section">
+      <div className="search-box">
+        <span className="search-icon">🔍</span>
+        <input
+          type="text"
+          placeholder="Search records..."
+          value={searchTerm}
+          onChange={handleSearch}
+          className="search-input"
+        />
+      </div>
+      
+      <button
+        onClick={() => setShowFilters(!showFilters)}
+        className="filter-toggle-btn"
+      >
+        <span>⚙️</span>
+        Filters
+      </button>
+
+      {showFilters && (
+        <div className="filter-panel">
+          <div className="filter-group">
+            <label>Year</label>
+            <select
+              value={filterYear || ""}
+              onChange={(e) => onFilterChange({ year: e.target.value || null })}
+              className="filter-select"
+            >
+              <option value="">All Years</option>
+              {years.map((y) => (
+                <option key={y} value={y}>{y}</option>
+              ))}
+            </select>
+          </div>
+          
+          <div className="filter-group">
+            <label>Month</label>
+            <select
+              value={filterMonth || ""}
+              onChange={(e) => onFilterChange({ month: e.target.value || null })}
+              className="filter-select"
+            >
+              <option value="">All Months</option>
+              {months.map((m) => (
+                <option key={m.value} value={m.value}>{m.label}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// Streaks Display Component
+const StreaksDisplay = ({ currentStreak, longestStreak }) => {
+  return (
+    <div className="streaks-section">
+      <div className="streak-card">
+        <div className="streak-icon">🔥</div>
+        <div className="streak-content">
+          <div className="streak-label">Current Streak</div>
+          <div className="streak-value">{currentStreak} days</div>
+        </div>
+      </div>
+      <div className="streak-card">
+        <div className="streak-icon">⭐</div>
+        <div className="streak-content">
+          <div className="streak-label">Longest Streak</div>
+          <div className="streak-value">{longestStreak} days</div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Export Component
+const ExportSection = ({ onExport }) => {
+  return (
+    <div className="export-section">
+      <button onClick={() => onExport("json")} className="export-btn">
+        <span>📥</span>
+        Export JSON
+      </button>
+      <button onClick={() => onExport("csv")} className="export-btn">
+        <span>📊</span>
+        Export CSV
+      </button>
+    </div>
+  );
+};
+
+// Insights Component
+const InsightsSection = ({ insights }) => {
+  if (!insights || insights.length === 0) return null;
+
+  return (
+    <div className="insights-section">
+      <h3 className="insights-title">📈 Key Insights</h3>
+      <div className="insights-grid">
+        {insights.map((insight, index) => (
+          <div key={index} className="insight-card">
+            <div className="insight-label">{insight.label}</div>
+            <div className="insight-value">{insight.value}</div>
+            <div className="insight-subtext">{insight.subtext}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 };
 
 // Beautiful Animated Stat Card Component
@@ -581,6 +846,11 @@ function App() {
   const [oneCount, setOneCount] = useState(0);
   const [yearCounts, setYearCounts] = useState({});
   const [monthCounts, setMonthCounts] = useState({});
+  const [searchTerm, setSearchTerm] = useState("");
+  const [filterYear, setFilterYear] = useState(null);
+  const [filterMonth, setFilterMonth] = useState(null);
+  const [streaks, setStreaks] = useState({ currentStreak: 0, longestStreak: 0 });
+  const [insights, setInsights] = useState([]);
 
   const updateCounts = (dataToCount) => {
     const { xCount, oneCount, yearCounts, monthCounts } =
@@ -598,6 +868,8 @@ function App() {
           const response = await readData();
           setData(response);
           updateCounts(response);
+          const streakData = calculateStreaks(response);
+          setStreaks(streakData);
         } catch (err) {
           setError("Error fetching data");
         } finally {
@@ -607,6 +879,14 @@ function App() {
       fetchData();
     }
   }, [isAuthenticated]);
+
+  // Update insights when counts change
+  useEffect(() => {
+    if (data && yearCounts && monthCounts) {
+      const newInsights = getInsights(data, yearCounts, monthCounts);
+      setInsights(newInsights);
+    }
+  }, [data, yearCounts, monthCounts]);
 
   const addRecord = async (year, month, date, value) => {
     const newData = { [date]: value };
@@ -628,6 +908,8 @@ function App() {
       const updatedData = await readData();
       setData(updatedData);
       updateCounts(updatedData);
+      const streakData = calculateStreaks(updatedData);
+      setStreaks(streakData);
     } catch (error) {
       console.error("Error adding record:", error);
       alert("Error adding record. Please try again.");
@@ -653,6 +935,8 @@ function App() {
       const refreshedData = await readData();
       setData(refreshedData);
       updateCounts(refreshedData);
+      const streakData = calculateStreaks(refreshedData);
+      setStreaks(streakData);
     } catch (error) {
       console.error("Error deleting record:", error);
       alert("Error deleting record. Please try again.");
@@ -714,6 +998,50 @@ function App() {
       </header>
 
       <main className="app-main">
+        {/* Search and Filter */}
+        {data && (
+          <SearchFilter
+            onSearch={setSearchTerm}
+            onFilterChange={(filters) => {
+              if (filters.year !== undefined) setFilterYear(filters.year);
+              if (filters.month !== undefined) setFilterMonth(filters.month);
+            }}
+            filterYear={filterYear}
+            filterMonth={filterMonth}
+            years={Object.keys(yearCounts).sort((a, b) => parseInt(b) - parseInt(a))}
+            months={[
+              { value: "Jan", label: "Jan" },
+              { value: "Feb", label: "Feb" },
+              { value: "Mar", label: "Mar" },
+              { value: "Apr", label: "Apr" },
+              { value: "May", label: "May" },
+              { value: "Jun", label: "Jun" },
+              { value: "Jul", label: "Jul" },
+              { value: "Aug", label: "Aug" },
+              { value: "Sep", label: "Sep" },
+              { value: "Oct", label: "Oct" },
+              { value: "Nov", label: "Nov" },
+              { value: "Dec", label: "Dec" },
+            ]}
+          />
+        )}
+
+        {/* Export Section */}
+        {data && (
+          <ExportSection onExport={(format) => exportData(data, format)} />
+        )}
+
+        {/* Streaks Display */}
+        {streaks.currentStreak > 0 || streaks.longestStreak > 0 ? (
+          <StreaksDisplay
+            currentStreak={streaks.currentStreak}
+            longestStreak={streaks.longestStreak}
+          />
+        ) : null}
+
+        {/* Insights Section */}
+        {insights.length > 0 && <InsightsSection insights={insights} />}
+
         <div className="stats-section">
           <StatCard
             label="Total Masturbated"
@@ -768,28 +1096,72 @@ function App() {
           </div>
         </div>
 
-        {data && (
-          <>
-            <YearlyOverview yearCounts={yearCounts} data={data} />
-            
-            <div className="years-section">
-            {Object.entries(data)
-              .reverse()
-              .map(([year, months]) => (
-                <YearDisplay
-                  key={year}
-                  year={year}
-                  months={months}
-                  yearCounts={
-                    yearCounts[year] || { yearXCount: 0, yearOneCount: 0 }
+        {data && (() => {
+          // Filter data based on search and filters
+          let filteredData = { ...data };
+          
+          if (filterYear) {
+            filteredData = { [filterYear]: filteredData[filterYear] || {} };
+          }
+          
+          if (filterMonth && Object.keys(filteredData).length > 0) {
+            Object.keys(filteredData).forEach(year => {
+              if (filteredData[year][filterMonth]) {
+                filteredData[year] = { [filterMonth]: filteredData[year][filterMonth] };
+              } else {
+                delete filteredData[year];
+              }
+            });
+          }
+          
+          // Apply search filter
+          if (searchTerm) {
+            const searchLower = searchTerm.toLowerCase();
+            Object.keys(filteredData).forEach(year => {
+              Object.keys(filteredData[year]).forEach(month => {
+                Object.keys(filteredData[year][month]).forEach(day => {
+                  const value = filteredData[year][month][day];
+                  const type = value === "1" ? "masturbated" : "nightfall";
+                  const dateStr = `${day} ${month} ${year}`.toLowerCase();
+                  
+                  if (!type.includes(searchLower) && !dateStr.includes(searchLower)) {
+                    delete filteredData[year][month][day];
                   }
-                  monthCounts={monthCounts}
-                  onDelete={deleteRecord}
-                />
-              ))}
-            </div>
-          </>
-        )}
+                });
+                if (Object.keys(filteredData[year][month]).length === 0) {
+                  delete filteredData[year][month];
+                }
+              });
+              if (Object.keys(filteredData[year]).length === 0) {
+                delete filteredData[year];
+              }
+            });
+          }
+          
+          return (
+            <>
+              <YearlyOverview yearCounts={yearCounts} data={data} />
+              
+              <div className="years-section">
+                {Object.entries(filteredData)
+                  .reverse()
+                  .filter(([year]) => !filterYear || year === filterYear)
+                  .map(([year, months]) => (
+                    <YearDisplay
+                      key={year}
+                      year={year}
+                      months={months}
+                      yearCounts={
+                        yearCounts[year] || { yearXCount: 0, yearOneCount: 0 }
+                      }
+                      monthCounts={monthCounts}
+                      onDelete={deleteRecord}
+                    />
+                  ))}
+              </div>
+            </>
+          );
+        })()}
 
         <AddRecordForm onAdd={addRecord} />
       </main>
