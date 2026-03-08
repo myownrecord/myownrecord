@@ -512,20 +512,18 @@ const ThisMonthSummary = ({ data, monthCounts, currentStreak }) => {
     <div className="this-month-section">
       <div className="this-month-card">
         <h3 className="this-month-title">📅 This Month</h3>
-        <div className="this-month-stats">
-          <div className="this-month-main">
-            <span className="this-month-value">{thisTotal}</span>
-            <span className="this-month-label">records in {thisMonth}</span>
-          </div>
-          <div className="this-month-detail">
-            {diffText}
-          </div>
-          {currentStreak > 0 && (
-            <div className="this-month-streak">
-              🔥 Current streak: <strong>{currentStreak} days</strong>
-            </div>
-          )}
+        <div className="this-month-main">
+          <span className="this-month-value">{thisTotal}</span>
+          <span className="this-month-label">records in {thisMonth}</span>
         </div>
+        <div className="this-month-detail">
+          {diffText}
+        </div>
+        {currentStreak > 0 && (
+          <div className="this-month-streak">
+            🔥 Current streak: <strong>{currentStreak} days</strong>
+          </div>
+        )}
       </div>
     </div>
   );

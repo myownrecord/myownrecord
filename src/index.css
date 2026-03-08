@@ -1604,46 +1604,49 @@ html {
   padding: 1.5rem 2rem;
   border: 1px solid rgba(255, 255, 255, 0.1);
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
 }
 
 .this-month-title {
   font-size: 1.25rem;
-  margin-bottom: 1rem;
-  color: rgba(255, 255, 255, 0.9);
-}
-
-.this-month-stats {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 1rem;
+  margin-bottom: 0;
+  color: rgba(255, 255, 255, 0.95);
+  font-weight: 600;
 }
 
 .this-month-main {
   display: flex;
   align-items: baseline;
   gap: 0.5rem;
+  flex-wrap: wrap;
 }
 
 .this-month-value {
   font-size: 2rem;
   font-weight: 800;
   color: #3b82f6;
+  line-height: 1.2;
 }
 
 .this-month-label {
-  font-size: 0.95rem;
-  color: rgba(255, 255, 255, 0.7);
+  font-size: 1rem;
+  color: rgba(255, 255, 255, 0.85);
 }
 
 .this-month-detail {
-  font-size: 0.9rem;
-  color: rgba(255, 255, 255, 0.6);
+  font-size: 0.95rem;
+  color: rgba(255, 255, 255, 0.85);
+  padding: 0.5rem 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  margin-top: 0.25rem;
 }
 
 .this-month-streak {
-  font-size: 0.9rem;
+  font-size: 0.95rem;
   color: rgba(251, 191, 36, 0.95);
+  padding-top: 0.25rem;
 }
 
 /* Date item note/mood */
