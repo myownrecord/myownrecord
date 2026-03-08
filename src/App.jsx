@@ -1,13 +1,26 @@
 import React, { useEffect, useState } from "react";
 import { readData, writeData } from "./apis/api";
 
+// Record value can be string "1"|"x" or object { value: "1"|"x", note?: string, mood?: string }
+const getRecordValue = (record) =>
+  record && typeof record === "object" && "value" in record ? record.value : record;
+const getRecordNote = (record) =>
+  record && typeof record === "object" && "note" in record ? record.note : undefined;
+const getRecordMood = (record) =>
+  record && typeof record === "object" && "mood" in record ? record.mood : undefined;
+
+const PASSWORD_STORAGE_KEY = "insight_tracker_password";
+const DEFAULT_PASSWORD = "asyncHide098";
+const THEME_STORAGE_KEY = "insight_tracker_theme";
+
 // Password Login Component
 const PasswordLogin = ({ onPasswordCorrect }) => {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
-  const correctPassword = "asyncHide098";
+  const storedPassword = typeof localStorage !== "undefined" ? localStorage.getItem(PASSWORD_STORAGE_KEY) : null;
+  const correctPassword = storedPassword || DEFAULT_PASSWORD;
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -31,7 +44,7 @@ const PasswordLogin = ({ onPasswordCorrect }) => {
       <div className="password-container">
         <div className="password-header">
           <div className="password-icon">🔐</div>
-          <h1 className="password-title">Insight Tracker</h1>
+          <h1 className="password-title">Private Tracker</h1>
           <p className="password-subtitle">Enter password to access your records</p>
         </div>
 
@@ -82,61 +95,79 @@ const PasswordLogin = ({ onPasswordCorrect }) => {
 
 // Calculate streaks from data
 const calculateStreaks = (data) => {
-  if (!data) return { currentStreak: 0, longestStreak: 0 };
+  if (!data) return { currentStreak: 0, longestStreak: 0, longestStreakStart: null, longestStreakEnd: null, isStreakAtRisk: false };
   
   const allDates = [];
-  for (let year in data) {
-    for (let month in data[year]) {
-      for (let day in data[year][month]) {
+  for (const year of Object.keys(data)) {
+    if (!/^\d{4}$/.test(year)) continue;
+    for (const month in data[year]) {
+      for (const day in data[year][month]) {
+        const val = getRecordValue(data[year][month][day]);
+        if (val !== "1" && val !== "x") continue;
         const monthIndex = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"].indexOf(month);
         if (monthIndex !== -1) {
-          const date = new Date(year, monthIndex, parseInt(day));
+          const date = new Date(parseInt(year), monthIndex, parseInt(day));
           allDates.push(date);
         }
       }
     }
   }
   
-  if (allDates.length === 0) return { currentStreak: 0, longestStreak: 0 };
+  if (allDates.length === 0) return { currentStreak: 0, longestStreak: 0, longestStreakStart: null, longestStreakEnd: null, isStreakAtRisk: false };
   
-  // Sort dates
   allDates.sort((a, b) => a - b);
   
-  // Calculate current streak (from today backwards)
-  let currentStreak = 0;
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  
+  const todayTime = today.getTime();
+  const hasToday = allDates.some((d) => d.getTime() === todayTime);
+
+  // Current streak (from today backwards)
+  let currentStreak = 0;
   for (let i = allDates.length - 1; i >= 0; i--) {
     const checkDate = new Date(today);
     checkDate.setDate(checkDate.getDate() - currentStreak);
     checkDate.setHours(0, 0, 0, 0);
-    
     if (allDates[i].getTime() === checkDate.getTime()) {
       currentStreak++;
-    } else if (currentStreak > 0) {
-      break;
-    }
+    } else if (currentStreak > 0) break;
   }
-  
-  // Calculate longest streak
+
+  // Longest streak and its date range
   let longestStreak = 1;
   let tempStreak = 1;
-  
+  let longestStart = allDates[0];
+  let longestEnd = allDates[0];
+  let tempStart = allDates[0];
+
   for (let i = 1; i < allDates.length; i++) {
     const prevDate = allDates[i - 1];
     const currDate = allDates[i];
     const diffDays = Math.floor((currDate - prevDate) / (1000 * 60 * 60 * 24));
-    
     if (diffDays === 1) {
       tempStreak++;
-      longestStreak = Math.max(longestStreak, tempStreak);
+      if (tempStreak > longestStreak) {
+        longestStreak = tempStreak;
+        longestStart = tempStart;
+        longestEnd = currDate;
+      }
     } else {
       tempStreak = 1;
+      tempStart = currDate;
     }
   }
-  
-  return { currentStreak, longestStreak };
+
+  const isStreakAtRisk = currentStreak > 0 && !hasToday;
+  const formatDate = (d) => d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+
+  return {
+    currentStreak,
+    longestStreak,
+    longestStreakStart: longestStart,
+    longestStreakEnd: longestEnd,
+    longestStreakRange: longestStreak > 0 ? `${formatDate(longestStart)} – ${formatDate(longestEnd)}` : null,
+    isStreakAtRisk,
+  };
 };
 
 // Get statistics insights
@@ -197,19 +228,19 @@ const exportData = (data, format = "json") => {
     link.click();
     URL.revokeObjectURL(url);
   } else if (format === "csv") {
-    const rows = [];
-    rows.push(["Year", "Month", "Date", "Type"]);
-    
-    for (let year in data) {
+    const rows = [["Year", "Month", "Date", "Type", "Note", "Mood"]];
+    for (const year of Object.keys(data)) {
+      if (!/^\d{4}$/.test(year)) continue;
       for (let month in data[year]) {
         for (let day in data[year][month]) {
-          const type = data[year][month][day] === "1" ? "Masturbated" : "Nightfall";
-          rows.push([year, month, day, type]);
+          const record = data[year][month][day];
+          const val = getRecordValue(record);
+          const type = val === "1" ? "Masturbated" : "Nightfall";
+          rows.push([year, month, day, type, getRecordNote(record) || "", getRecordMood(record) || ""]);
         }
       }
     }
-    
-    const csv = rows.map(row => row.join(",")).join("\n");
+    const csv = rows.map((row) => row.map((cell) => (typeof cell === "string" && (cell.includes(",") || cell.includes('"')) ? `"${String(cell).replace(/"/g, '""')}"` : cell)).join(",")).join("\n");
     const blob = new Blob([csv], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
@@ -227,14 +258,15 @@ const countOccurrences = (data) => {
   const yearCounts = {};
   const monthCounts = {};
 
-  for (let year in data) {
+  for (const year of Object.keys(data)) {
+    if (!/^\d{4}$/.test(year)) continue;
     let yearXCount = 0;
     let yearOneCount = 0;
     for (let month in data[year]) {
       let monthXCount = 0;
       let monthOneCount = 0;
       for (let day in data[year][month]) {
-        const value = data[year][month][day];
+        const value = getRecordValue(data[year][month][day]);
         if (value === "x") {
           xCount++;
           yearXCount++;
@@ -321,9 +353,15 @@ const SearchFilter = ({ onSearch, onFilterChange, filterYear, filterMonth, years
 };
 
 // Streaks Display Component
-const StreaksDisplay = ({ currentStreak, longestStreak }) => {
+const StreaksDisplay = ({ currentStreak, longestStreak, longestStreakRange, isStreakAtRisk }) => {
   return (
     <div className="streaks-section">
+      {isStreakAtRisk && (
+        <div className="streak-at-risk">
+          <span className="streak-at-risk-icon">⚠️</span>
+          <span>Log today to keep your {currentStreak}-day streak!</span>
+        </div>
+      )}
       <div className="streak-card">
         <div className="streak-icon">🔥</div>
         <div className="streak-content">
@@ -336,6 +374,7 @@ const StreaksDisplay = ({ currentStreak, longestStreak }) => {
         <div className="streak-content">
           <div className="streak-label">Longest Streak</div>
           <div className="streak-value">{longestStreak} days</div>
+          {longestStreakRange && <div className="streak-range">{longestStreakRange}</div>}
         </div>
       </div>
     </div>
@@ -354,6 +393,140 @@ const ExportSection = ({ onExport }) => {
         <span>📊</span>
         Export CSV
       </button>
+    </div>
+  );
+};
+
+// Settings Modal with Change Password
+const SettingsModal = ({ onClose, onPasswordChanged }) => {
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+
+  const storedPassword = typeof localStorage !== "undefined" ? localStorage.getItem(PASSWORD_STORAGE_KEY) : null;
+  const correctPassword = storedPassword || DEFAULT_PASSWORD;
+
+  const handleChangePassword = (e) => {
+    e.preventDefault();
+    setError("");
+    setSuccess("");
+    if (newPassword.length < 4) {
+      setError("New password must be at least 4 characters.");
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setError("New password and confirmation do not match.");
+      return;
+    }
+    if (currentPassword !== correctPassword) {
+      setError("Current password is incorrect.");
+      return;
+    }
+    if (typeof localStorage !== "undefined") {
+      localStorage.setItem(PASSWORD_STORAGE_KEY, newPassword);
+      setSuccess("Password changed. Use the new password next time you log in.");
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+      setTimeout(() => { setSuccess(""); onPasswordChanged(); }, 1500);
+    }
+  };
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-content settings-modal" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-header">
+          <h2 className="modal-title">Settings</h2>
+          <button type="button" onClick={onClose} className="modal-close">×</button>
+        </div>
+        <div className="settings-body">
+          <form onSubmit={handleChangePassword} className="settings-form">
+            <h3 className="settings-section-title">Change Password</h3>
+            <div className="form-group">
+              <label className="form-label">Current password</label>
+              <input
+                type="password"
+                value={currentPassword}
+                onChange={(e) => { setCurrentPassword(e.target.value); setError(""); }}
+                className="form-input"
+                placeholder="Current password"
+                autoComplete="current-password"
+              />
+            </div>
+            <div className="form-group">
+              <label className="form-label">New password</label>
+              <input
+                type="password"
+                value={newPassword}
+                onChange={(e) => { setNewPassword(e.target.value); setError(""); }}
+                className="form-input"
+                placeholder="New password (min 4 characters)"
+                autoComplete="new-password"
+                minLength={4}
+              />
+            </div>
+            <div className="form-group">
+              <label className="form-label">Confirm new password</label>
+              <input
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => { setConfirmPassword(e.target.value); setError(""); }}
+                className="form-input"
+                placeholder="Confirm new password"
+                autoComplete="new-password"
+              />
+            </div>
+            {error && <div className="password-error">{error}</div>}
+            {success && <div className="settings-success">{success}</div>}
+            <button type="submit" className="submit-btn">Change Password</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// This Month Summary Card
+const ThisMonthSummary = ({ data, monthCounts, currentStreak }) => {
+  if (!data || !monthCounts) return null;
+  const now = new Date();
+  const thisYear = now.getFullYear().toString();
+  const thisMonth = now.toLocaleString("default", { month: "short" });
+  const key = `${thisYear}-${thisMonth}`;
+  const thisMonthData = monthCounts[key] || { monthXCount: 0, monthOneCount: 0 };
+  const thisTotal = thisMonthData.monthXCount + thisMonthData.monthOneCount;
+
+  const lastMonthDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  const lastYear = lastMonthDate.getFullYear().toString();
+  const lastMonth = lastMonthDate.toLocaleString("default", { month: "short" });
+  const lastKey = `${lastYear}-${lastMonth}`;
+  const lastMonthData = monthCounts[lastKey] || { monthXCount: 0, monthOneCount: 0 };
+  const lastTotal = lastMonthData.monthXCount + lastMonthData.monthOneCount;
+
+  const diff = thisTotal - lastTotal;
+  const diffText = diff > 0 ? `${diff} more than last month` : diff < 0 ? `${Math.abs(diff)} fewer than last month` : "Same as last month";
+
+  return (
+    <div className="this-month-section">
+      <div className="this-month-card">
+        <h3 className="this-month-title">📅 This Month</h3>
+        <div className="this-month-stats">
+          <div className="this-month-main">
+            <span className="this-month-value">{thisTotal}</span>
+            <span className="this-month-label">records in {thisMonth}</span>
+          </div>
+          <div className="this-month-detail">
+            {diffText}
+          </div>
+          {currentStreak > 0 && (
+            <div className="this-month-streak">
+              🔥 Current streak: <strong>{currentStreak} days</strong>
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 };
@@ -442,12 +615,22 @@ const MonthDisplay = ({ year, month, dates, monthCounts, onDelete }) => {
       </div>
 
       <div className="month-dates">
-        {Object.entries(dates).map(([date, value]) => (
+        {Object.entries(dates).map(([date, record]) => {
+          const value = getRecordValue(record);
+          const note = getRecordNote(record);
+          const mood = getRecordMood(record);
+          return (
           <div key={date} className="date-item">
             <span className="date-number">{date}</span>
             <span className={`date-type ${value == 1 ? "type-self" : "type-natural"}`}>
               {value == 1 ? "Masturbated" : "Nightfall"}
             </span>
+            {(note || mood) && (
+              <span className="date-note-mood" title={[note, mood].filter(Boolean).join(" · ")}>
+                {mood && <span className="date-mood">{mood}</span>}
+                {note && <span className="date-note">{note}</span>}
+              </span>
+            )}
             <button
               onClick={() => onDelete(year, month, date)}
               className="delete-btn"
@@ -456,7 +639,8 @@ const MonthDisplay = ({ year, month, dates, monthCounts, onDelete }) => {
               ×
             </button>
           </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
@@ -643,7 +827,19 @@ const AddRecordForm = ({ onAdd }) => {
   const [month, setMonth] = useState(currentMonth);
   const [date, setDate] = useState(currentDay);
   const [value, setValue] = useState("");
+  const [note, setNote] = useState("");
+  const [mood, setMood] = useState("");
   const [isOpen, setIsOpen] = useState(false);
+
+  const moodOptions = [
+    { value: "", label: "No mood" },
+    { value: "Good", label: "😊 Good" },
+    { value: "Okay", label: "😐 Okay" },
+    { value: "Bad", label: "😔 Bad" },
+    { value: "Anxious", label: "😟 Anxious" },
+    { value: "Calm", label: "😌 Calm" },
+    { value: "Stressed", label: "😤 Stressed" },
+  ];
 
   const years = Array.from({ length: 31 }, (_, index) => 2020 + index);
   
@@ -695,8 +891,7 @@ const AddRecordForm = ({ onAdd }) => {
       alert("Please fill out all fields!");
       return;
     }
-    onAdd(year, month, date, value);
-    // Reset to current date after submission
+    onAdd(year, month, date, value, note.trim() || undefined, mood || undefined);
     const newDate = new Date();
     const newYear = newDate.getFullYear().toString();
     const newMonth = newDate.toLocaleString('default', { month: 'short' });
@@ -705,6 +900,8 @@ const AddRecordForm = ({ onAdd }) => {
     setMonth(newMonth);
     setDate(newDay);
     setValue("");
+    setNote("");
+    setMood("");
     setIsOpen(false);
   };
 
@@ -825,6 +1022,31 @@ const AddRecordForm = ({ onAdd }) => {
                 <input type="hidden" value={value} required />
               </div>
 
+              <div className="form-group">
+                <label className="form-label">Mood (optional)</label>
+                <select
+                  value={mood}
+                  onChange={(e) => setMood(e.target.value)}
+                  className="form-select"
+                >
+                  {moodOptions.map((opt) => (
+                    <option key={opt.value || "none"} value={opt.value}>{opt.label}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Note (optional)</label>
+                <input
+                  type="text"
+                  value={note}
+                  onChange={(e) => setNote(e.target.value)}
+                  className="form-input"
+                  placeholder="Short note..."
+                  maxLength={200}
+                />
+              </div>
+
               <button type="submit" className="submit-btn">
                 Add Record
               </button>
@@ -849,8 +1071,15 @@ function App() {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterYear, setFilterYear] = useState(null);
   const [filterMonth, setFilterMonth] = useState(null);
-  const [streaks, setStreaks] = useState({ currentStreak: 0, longestStreak: 0 });
+  const [streaks, setStreaks] = useState({ currentStreak: 0, longestStreak: 0, longestStreakRange: null, isStreakAtRisk: false });
   const [insights, setInsights] = useState([]);
+  const [theme, setTheme] = useState(() => (typeof localStorage !== "undefined" ? localStorage.getItem(THEME_STORAGE_KEY) : null) || "dark");
+  const [settingsOpen, setSettingsOpen] = useState(false);
+
+  useEffect(() => {
+    if (typeof localStorage !== "undefined") localStorage.setItem(THEME_STORAGE_KEY, theme);
+    document.documentElement.setAttribute("data-theme", theme);
+  }, [theme]);
 
   const updateCounts = (dataToCount) => {
     const { xCount, oneCount, yearCounts, monthCounts } =
@@ -888,8 +1117,9 @@ function App() {
     }
   }, [data, yearCounts, monthCounts]);
 
-  const addRecord = async (year, month, date, value) => {
-    const newData = { [date]: value };
+  const addRecord = async (year, month, date, value, note, mood) => {
+    const recordPayload = note || mood ? { value, ...(note && { note }), ...(mood && { mood }) } : value;
+    const newData = { [date]: recordPayload };
     const yearData = data[year] || {};
     let monthData = yearData[month] || {};
     let _data = { ...data };
@@ -983,19 +1213,47 @@ function App() {
   const naturalPercentage = total > 0 ? Math.round((xCount / total) * 100) : 0;
 
   return (
-    <div className="app-container">
+    <div className={`app-container theme-${theme}`}>
       <div className="background-gradient"></div>
       <div className="particles"></div>
 
       <header className="app-header">
         <div className="header-content">
-          <h1 className="app-title">
-            <span className="title-icon">📊</span>
-            Insight Tracker
-          </h1>
-          <p className="app-subtitle">Your personal insights, beautifully organized</p>
+          <div className="header-top">
+            <h1 className="app-title">
+              Private Tracker
+            </h1>
+            <div className="header-actions">
+              <button
+                type="button"
+                onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+                className="theme-toggle"
+                title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+              >
+                {theme === "dark" ? "☀️" : "🌙"}
+              </button>
+              <button
+                type="button"
+                onClick={() => setSettingsOpen(true)}
+                className="settings-btn"
+                title="Settings"
+              >
+                ⚙️
+              </button>
+            </div>
+          </div>
+          <p className="app-subtitle">
+            Log daily records, track streaks, and see trends over time — all private and in one place.
+          </p>
         </div>
       </header>
+
+      {settingsOpen && (
+        <SettingsModal
+          onClose={() => setSettingsOpen(false)}
+          onPasswordChanged={() => setSettingsOpen(false)}
+        />
+      )}
 
       <main className="app-main">
         {/* Search and Filter */}
@@ -1032,12 +1290,23 @@ function App() {
         )}
 
         {/* Streaks Display */}
-        {streaks.currentStreak > 0 || streaks.longestStreak > 0 ? (
+        {streaks.currentStreak > 0 || streaks.longestStreak > 0 || streaks.isStreakAtRisk ? (
           <StreaksDisplay
             currentStreak={streaks.currentStreak}
             longestStreak={streaks.longestStreak}
+            longestStreakRange={streaks.longestStreakRange}
+            isStreakAtRisk={streaks.isStreakAtRisk}
           />
         ) : null}
+
+        {/* This Month Summary */}
+        {data && (
+          <ThisMonthSummary
+            data={data}
+            monthCounts={monthCounts}
+            currentStreak={streaks.currentStreak}
+          />
+        )}
 
         {/* Insights Section */}
         {insights.length > 0 && <InsightsSection insights={insights} />}
@@ -1120,7 +1389,7 @@ function App() {
             Object.keys(filteredData).forEach(year => {
               Object.keys(filteredData[year]).forEach(month => {
                 Object.keys(filteredData[year][month]).forEach(day => {
-                  const value = filteredData[year][month][day];
+                  const value = getRecordValue(filteredData[year][month][day]);
                   const type = value === "1" ? "masturbated" : "nightfall";
                   const dateStr = `${day} ${month} ${year}`.toLowerCase();
                   

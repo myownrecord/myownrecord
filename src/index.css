@@ -97,12 +97,139 @@ body {
 }
 
 .header-content {
+  position: relative;
   backdrop-filter: blur(20px);
   background: rgba(20, 20, 40, 0.6);
   border-radius: 20px;
   padding: 2rem;
   border: 1px solid rgba(255, 255, 255, 0.1);
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+}
+
+.header-top {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.5rem;
+  position: relative;
+}
+
+.header-actions {
+  position: absolute;
+  right: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.theme-toggle,
+.settings-btn {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(0, 0, 0, 0.3);
+  color: #fff;
+  font-size: 1.25rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.theme-toggle:hover,
+.settings-btn:hover {
+  background: rgba(59, 130, 246, 0.3);
+  border-color: rgba(59, 130, 246, 0.5);
+}
+
+/* Light theme */
+.app-container.theme-light .background-gradient {
+  background: linear-gradient(135deg, #e0e7ff 0%, #fce7f3 25%, #fef3c7 50%, #d1fae5 75%, #e0f2fe 100%);
+}
+
+.app-container.theme-light .particles {
+  background-image:
+    radial-gradient(circle at 20% 50%, rgba(59, 130, 246, 0.12) 0%, transparent 50%),
+    radial-gradient(circle at 80% 80%, rgba(139, 92, 246, 0.1) 0%, transparent 50%);
+}
+
+.app-container.theme-light body,
+.app-container.theme-light {
+  color: #1e293b;
+}
+
+.app-container.theme-light .header-content,
+.app-container.theme-light .streak-card,
+.app-container.theme-light .stat-card,
+.app-container.theme-light .insight-card,
+.app-container.theme-light .export-btn,
+.app-container.theme-light .filter-toggle-btn {
+  background: rgba(255, 255, 255, 0.85);
+  border-color: rgba(0, 0, 0, 0.08);
+  color: #1e293b;
+}
+
+.app-container.theme-light .app-title {
+  background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.app-container.theme-light .app-subtitle,
+.app-container.theme-light .streak-label,
+.app-container.theme-light .insight-label {
+  color: rgba(30, 41, 59, 0.7);
+}
+
+.app-container.theme-light .search-input,
+.app-container.theme-light .form-select,
+.app-container.theme-light .form-input {
+  background: rgba(255, 255, 255, 0.9);
+  border-color: rgba(0, 0, 0, 0.1);
+  color: #1e293b;
+}
+
+.app-container.theme-light .form-input::placeholder {
+  color: rgba(30, 41, 59, 0.5);
+}
+
+.app-container.theme-light .theme-toggle,
+.app-container.theme-light .settings-btn {
+  background: rgba(255, 255, 255, 0.8);
+  border-color: rgba(0, 0, 0, 0.1);
+  color: #1e293b;
+}
+
+html[data-theme="light"] body {
+  background: #f1f5f9;
+  color: #1e293b;
+}
+
+.app-container.theme-light .this-month-card {
+  background: rgba(255, 255, 255, 0.85);
+  border-color: rgba(0, 0, 0, 0.08);
+}
+
+.app-container.theme-light .this-month-title,
+.app-container.theme-light .this-month-label {
+  color: rgba(30, 41, 59, 0.85);
+}
+
+.app-container.theme-light .this-month-detail {
+  color: rgba(30, 41, 59, 0.6);
+}
+
+.app-container.theme-light .streak-at-risk {
+  background: rgba(245, 158, 11, 0.15);
+  border-color: rgba(245, 158, 11, 0.4);
+  color: #b45309;
 }
 
 .app-title {
@@ -900,6 +1027,28 @@ body {
   padding: 0.5rem;
 }
 
+.form-input {
+  width: 100%;
+  padding: 1rem;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(0, 0, 0, 0.4);
+  color: #ffffff;
+  font-size: 1rem;
+  backdrop-filter: blur(10px);
+  transition: all 0.3s ease;
+}
+
+.form-input::placeholder {
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.form-input:focus {
+  outline: none;
+  border-color: rgba(59, 130, 246, 0.7);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
 .date-selection-group {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -1418,6 +1567,127 @@ html {
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+}
+
+.streak-range {
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.6);
+  margin-top: 0.35rem;
+}
+
+.streak-at-risk {
+  grid-column: 1 / -1;
+  padding: 1rem 1.5rem;
+  border-radius: 12px;
+  background: rgba(245, 158, 11, 0.2);
+  border: 1px solid rgba(245, 158, 11, 0.5);
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-weight: 600;
+  color: #fbbf24;
+}
+
+.streak-at-risk-icon {
+  font-size: 1.25rem;
+}
+
+/* This Month Summary */
+.this-month-section {
+  margin-bottom: 2rem;
+}
+
+.this-month-card {
+  backdrop-filter: blur(20px);
+  background: rgba(20, 20, 40, 0.7);
+  border-radius: 20px;
+  padding: 1.5rem 2rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+}
+
+.this-month-title {
+  font-size: 1.25rem;
+  margin-bottom: 1rem;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.this-month-stats {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem;
+}
+
+.this-month-main {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+}
+
+.this-month-value {
+  font-size: 2rem;
+  font-weight: 800;
+  color: #3b82f6;
+}
+
+.this-month-label {
+  font-size: 0.95rem;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.this-month-detail {
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.this-month-streak {
+  font-size: 0.9rem;
+  color: rgba(251, 191, 36, 0.95);
+}
+
+/* Date item note/mood */
+.date-note-mood {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.6);
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.date-mood {
+  background: rgba(59, 130, 246, 0.2);
+  padding: 0.15rem 0.4rem;
+  border-radius: 6px;
+}
+
+.date-note {
+  font-style: italic;
+}
+
+/* Settings modal */
+.settings-modal .settings-body {
+  padding: 0 0 1rem;
+}
+
+.settings-section-title {
+  font-size: 1rem;
+  margin-bottom: 1rem;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.settings-form .form-group {
+  margin-bottom: 1rem;
+}
+
+.settings-success {
+  color: #10b981;
+  font-size: 0.9rem;
+  margin-bottom: 1rem;
 }
 
 /* Export Styles */
